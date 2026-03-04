@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: prototipo-keikai
+
+  # Alta Performance com Java 21
+  threads:
+    virtual:
+      enabled: true
+
+  # Configuração do Banco de Dados H2
+  datasource:
+    url: jdbc:h2:mem:sheetdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        trace: false
+        web-allow-others: false
+
+  # Persistência e JPA
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+
+# Configurações de Log para Debug de extração
+logging:
+  level:
+    root: INFO
+    com.sheetbridge: DEBUG
+    org.hibernate.SQL: DEBUG
