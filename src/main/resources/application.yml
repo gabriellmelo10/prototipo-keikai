@@ -3,9 +3,9 @@ spring:
     name: prototipo-keikai
 
   # Alta Performance com Java 21
-  threads:
-    virtual:
-      enabled: true
+#  threads:
+#    virtual:
+#      enabled: true
 
   # Configuração do Banco de Dados H2
   datasource:
