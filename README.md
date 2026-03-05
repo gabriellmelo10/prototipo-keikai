@@ -2,10 +2,12 @@
 
 Este projeto integra a biblioteca **Keikai (v6.2.0.1)** para manipulação de planilhas web avançadas dentro do ecossistema Java.
 
-## 🛠 Stack Tecnológica
-* **Runtime:** Java 21 (LTS)
-* **Engine:** Keikai Spreadsheet 6.2.0.1
-* **Localidade:** Configuração customizada via CLDR/JRE
+## 🛠 Stack Tecnológica & Requisitos
+* **Java Runtime:** 17 (LTS)
+* **Framework:** Spring Boot 2.7.18
+* **Engine de Planilha:** Keikai Spreadsheet 6.2.0.1
+* **Persistência:** Spring Data JPA (H2 Database para desenvolvimento)
+* **Build System:** Maven
 
 ## ⚙️ Configuração do Ambiente (JVM)
 

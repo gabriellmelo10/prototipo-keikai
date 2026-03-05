@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zk xmlns="http://www.zkoss.org/2005/zul"
+    xmlns:h="native">
+
+    <window title="Protótipo TSE - Extração Keikai" border="normal"
+            width="100%" height="100%"
+            apply="br.jus.tse.prototipo_keikai.resource.PlanilhaResource">
+
+        <vlayout spacing="15px" vflex="1">
+
+            <hlayout spacing="10px" style="padding: 10px; background: #eeeeee; border-bottom: 1px solid #ccc">
+                <button id="btnSalvar" label="Salvar no H2"
+                        image="/img/save.png" sclass="btn-success"
+                        style="font-weight: bold; cursor: pointer;" />
+
+                <separator orient="vertical" bar="true" />
+
+                <label value="Status do Banco: " style="font-weight: bold"/>
+                <label id="lblStatus" value="Pronto para extração" />
+            </hlayout>
+
+            <spreadsheet id="meuKeikai"
+                         hflex="1" vflex="1"
+                         showFormulabar="true"
+                         showContextMenu="true"
+                         showToolbar="true"
+                         showSheetbar="true"
+                         maxVisibleRows="100"
+                         maxVisibleColumns="20"
+                         src="/static/modelo.xlsx"/>
+        </vlayout>
+
+        <style>
+            .btn-success {
+            background: #28a745;
+            color: white;
+            border-radius: 4px;
+            padding: 5px 15px;
+            }
+            .btn-success:hover {
+            background: #218838;
+            }
+        </style>
+    </window>
+</zk>

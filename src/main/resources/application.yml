@@ -2,10 +2,14 @@ spring:
   application:
     name: prototipo-keikai
 
-  # Alta Performance com Java 21
-#  threads:
-#    virtual:
-#      enabled: true
+  mvc:
+    resources:
+      static-locations: classpath:/META-INF/resources/,classpath:/web/,classpath:/static/,classpath:/public/,classpath:/resources/
+
+  web:
+    resources:
+      add-mappings: true
+      static-locations: classpath:/META-INF/resources/,classpath:/web/,classpath:/static/,classpath:/public/,classpath:/resources/
 
   # Configuração do Banco de Dados H2
   datasource:
