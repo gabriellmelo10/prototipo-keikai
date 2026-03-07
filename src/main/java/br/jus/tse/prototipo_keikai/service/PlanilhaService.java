@@ -9,76 +9,141 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.jus.tse.prototipo_keikai.entity.Despesa;
 import br.jus.tse.prototipo_keikai.repository.DespesaRepository;
+import io.keikai.api.Range;
 import io.keikai.api.Ranges;
+import io.keikai.api.model.Sheet;
 import io.keikai.ui.Spreadsheet;
 
+/**
+ * Serviço responsável por transformar os dados da planilha Keikai em entidades {@link Despesa}.
+ */
 @Service
 public class PlanilhaService {
+
+    private static final String CATEGORIA_PADRAO = "SEM CATEGORIA";
+
+    public static final int COL_ID = 0;
+    public static final int COL_CATEGORIA = 1;
+    public static final int COL_DESCRICAO = 2;
+    public static final int COL_VALOR = 3;
+    public static final int PRIMEIRA_LINHA_DADOS = 1;
 
     @Autowired
     private DespesaRepository repository;
 
+    /**
+     * Percorre a planilha ativa do componente {@link Spreadsheet}, extrai as linhas preenchidas
+     * e persiste os dados como entidades {@link Despesa}. Caso o ID esteja presente na planilha,
+     * o registro é atualizado; caso contrário, é inserido um novo.
+     *
+     * @param spreadsheet instância do componente Keikai com a planilha carregada
+     * @return quantidade de registros processados
+     */
     @Transactional
     public int processarPlanilha(Spreadsheet spreadsheet) {
-        var sheet = spreadsheet.getSelectedSheet();
-        List<Despesa> listaParaSalvar = new ArrayList<>();
+        Sheet sheet = spreadsheet.getSelectedSheet();
+        List<Despesa> despesas = new ArrayList<>();
 
-        // Iniciamos em i = 1 para pular o cabeçalho
-        for (int i = 1; i <= 5; i++) {
-            // Coluna 0 é o ID (geralmente ignoramos pois o DB gera via IDENTITY)
-            
-            // Coluna 1: Categoria
-            Object rawCat = Ranges.range(sheet, i, 1).getCellValue();
-            
-            // Coluna 2: Descrição (Usamos como critério de parada)
-            Object rawDesc = Ranges.range(sheet, i, 2).getCellValue();
-            if (rawDesc == null || rawDesc.toString().isBlank()) break;
+        for (int row = PRIMEIRA_LINHA_DADOS; ; row++) {
+            Range descricaoCell = Ranges.range(sheet, row, COL_DESCRICAO);
+            String descricao = descricaoCell.getCellEditText();
+            if (descricao == null || descricao.isBlank()) {
+                break;
+            }
 
-            // Coluna 3: Valor
-            Object rawValor = Ranges.range(sheet, i, 3).getCellValue();
+            Long id = recuperarLong(Ranges.range(sheet, row, COL_ID));
+            Despesa despesa = id != null
+                    ? repository.findById(id).orElseGet(Despesa::new)
+                    : new Despesa();
 
+            if (id != null) {
+                despesa.setId(id);
+            }
+
+            despesa.setCategoria(recuperarTexto(Ranges.range(sheet, row, COL_CATEGORIA), CATEGORIA_PADRAO));
+            despesa.setDescricao(descricao);
+            despesa.setValor(recuperarDouble(Ranges.range(sheet, row, COL_VALOR)));
+
+            despesas.add(despesa);
+        }
+
+        if (!despesas.isEmpty()) {
+            repository.saveAll(despesas);
+        }
+
+        return despesas.size();
+    }
+
+    /**
+     * Converte o valor da célula para {@link Long}, aceitando números e strings normalizadas.
+     *
+     * @param cell célula da planilha
+     * @return valor convertido ou {@code null}
+     */
+    private Long recuperarLong(Range cell) {
+        if (cell == null) {
+            return null;
+        }
+
+        Object value = cell.getCellValue();
+        if (value instanceof Number number) {
+            long converted = number.longValue();
+            return converted > 0 ? converted : null;
+        }
+
+        String text = cell.getCellEditText();
+        if (text != null && !text.isBlank()) {
             try {
-                Despesa d = new Despesa();
-                d.setCategoria(rawCat != null ? rawCat.toString() : "SEM CATEGORIA");
-                d.setDescricao(rawDesc.toString());
-                d.setValor(extrairDouble(rawValor));
-
-                listaParaSalvar.add(d);
-            } catch (Exception e) {
-                System.err.println("Erro na linha " + (i + 1) + ": " + e.getMessage());
+                long converted = Long.parseLong(text.trim());
+                return converted > 0 ? converted : null;
+            } catch (NumberFormatException e) {
+                System.err.println("ID inválido para conversão numérica: " + text);
             }
         }
 
-        if (!listaParaSalvar.isEmpty()) {
-            repository.saveAll(listaParaSalvar);
-        }
-        
-        return listaParaSalvar.size();
+        return null;
     }
 
-    private Double extrairDouble(Object value) {
-        // 1. Tratamento para Nulo
-        if (value == null) {
+    /**
+     * Converte o valor de uma célula para {@link Double}, tratando números e strings com vírgula.
+     *
+     * @param cell célula da planilha
+     * @return valor numérico convertido ou zero
+     */
+    private Double recuperarDouble(Range cell) {
+        if (cell == null) {
             return 0.0;
         }
 
-        // 2. Pattern Matching para Number (Captura Double, Integer, Long, etc.)
-        if (value instanceof Number n) {
-            return n.doubleValue();
+        Object value = cell.getCellValue();
+        if (value instanceof Number number) {
+            return number.doubleValue();
         }
 
-        // 3. Pattern Matching para String com verificação de conteúdo
-        if (value instanceof String s && !s.isBlank()) {
+        String text = cell.getCellEditText();
+        if (text != null && !text.isBlank()) {
             try {
-                // Normaliza o formato brasileiro (vírgula) para o padrão Double (ponto)
-                return Double.parseDouble(s.trim().replace(",", "."));
+                return Double.parseDouble(text.trim().replace(",", "."));
             } catch (NumberFormatException e) {
-                // Logar o valor problemático para facilitar o debug em produção
-                System.err.println("Valor inválido para conversão numérica: " + s);
-                return 0.0;
+                System.err.println("Valor inválido para conversão numérica: " + text);
             }
         }
 
         return 0.0;
+    }
+
+    /**
+     * Normaliza o texto de uma célula, aplicando um valor padrão quando necessário.
+     *
+     * @param cell célula da planilha
+     * @param defaultValue valor padrão para campos vazios
+     * @return texto normalizado
+     */
+    private String recuperarTexto(Range cell, String defaultValue) {
+        String text = cell.getCellEditText();
+        if (text == null || text.isBlank()) {
+            return defaultValue;
+        }
+        return text.trim();
     }
 }
